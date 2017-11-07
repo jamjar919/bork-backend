@@ -10,9 +10,11 @@ mongoose.connect('mongodb://localhost/graphdb', {
     useMongoClient: true,
 }); 
 
+app.use(express.static('public'));
+
 // Setup body-parser to serve json
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use('/api', bodyParser.urlencoded({ extended: true }));
+app.use('/api', bodyParser.json());
 
 // Setup routes for the app
 var routes = require('./api/routes/graphRoutes');
