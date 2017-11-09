@@ -1,6 +1,12 @@
-import { permute, calculatePartition, splitArray, intArray, getRandomInt, addArray } from './tools';
+const Tools = require('./tools');
+const permute = Tools.permute,
+calculatePartition = Tools.calculatePartition,
+splitArray = Tools.splitArray,
+intArray = Tools.intArray,
+getRandomInt = Tools.getRandomInt,
+addArray = Tools.addArray;
 
-export function brute(G) {
+module.exports.brute = function(G) {
     const permutations = permute(intArray(0, G.size));
     let bestPartition = [];
     let best = null;
@@ -19,7 +25,7 @@ export function brute(G) {
     return bestPartition;
 }
 
-export function fillGraph(G, n, debug = false) {
+module.exports.fillGraph = function (G, n, debug = false) {
     let log = (m) => {
         console.log(m);
     };

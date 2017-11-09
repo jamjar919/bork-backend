@@ -1,10 +1,10 @@
-import Graph from './graph';
+const Graph = require('./graph');
 
-export function getRandomInt(min, max) {
+module.exports.getRandomInt = (min, max) => {
     return Math.floor(Math.random() * (max - (min + 1))) + min;
 }
 
-export function intArray(min, max) {
+module.exports.intArray = (min, max) => {
     if (max < min) {
         return [];
     }
@@ -15,7 +15,7 @@ export function intArray(min, max) {
     return result;
 }
 
-export function addArray(a1, a2) {
+module.exports.addArray = (a1, a2) => {
     if (a1.length < a2.length) {
         throw Error('a1 should be bigger than a2, sized wrong');
     }
@@ -26,7 +26,7 @@ export function addArray(a1, a2) {
     return result;
 }
 
-export function permute(array) {
+module.exports.permute = (array) => {
     if (array.length === 1) {
         return array;
     }
@@ -44,14 +44,14 @@ export function permute(array) {
     return results;
 }
 
-export function splitArray(array, index) {
+module.exports.splitArray = (array, index) => {
     return [
         array.slice(0, index),
         array.slice(index),
     ];
 }
 
-export function flattenPartition(partition) {
+module.exports.flattenPartition = (partition) => {
     let result = [];
     for (let i = 0; i < partition.length; i += 1) {
         result = result.concat(partition[i]);
@@ -59,7 +59,7 @@ export function flattenPartition(partition) {
     return result;
 }
 
-export function isValidPartition(G, partition) {
+module.exports.isValidPartition = (G, partition) => {
     // A partition is valid if it contains all the numbers from 0 - G.size - 1
     const flat = flattenPartition(partition);
     for (let i = 0; i < G.size; i += 1) {
@@ -77,20 +77,20 @@ export function isValidPartition(G, partition) {
     return true;
 }
 
-export function randomGraph(size, min = 0, max = 5) {
+module.exports.randomGraph = (size, min = 0, max = 5) => {
     const G = new Graph(size);
     for (let i = 0; i < size; i += 1) {
         for (let j = 0; j < size; j += 1) {
             G.weight(
                 i, j,
-                getRandomInt(min, max),
+                getRandomInt(min, max)
             );
         }
     }
     return G;
 }
 
-export function calculatePartition(G, partition) {
+module.exports.calculatePartition = (G, partition) => {
     // G is a graph, partition is an array of the form [[0,1,2],[3,4],...[9,10]]
     // where each subarray is a partition
     if (isValidPartition(G, partition)) {

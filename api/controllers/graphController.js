@@ -1,10 +1,13 @@
 'use strict';
 
+const Graph = require('../graph');
+const Solver = require('../solvers');
+
 var mongoose = require('mongoose'),
-Graph = mongoose.model('Graph');
+GraphModel = mongoose.model('Graph');
 
 exports.list_all = function(req, res) {
-    Graph.find({}, function(err, graphs) {
+    GraphModel.find({}, function(err, graphs) {
         if (err)
             res.send(err);
         res.json(graphs);
@@ -12,37 +15,107 @@ exports.list_all = function(req, res) {
 };
 
 exports.create = function(req, res) {
-    var new_graph = new Graph(req.body);
+    console.log(req.body);
+    if (req.body.size) {
+        const size = parseInt(req.body.size);
+        const row = [];
+        for (let i = 0; i < size; i += 1) {
+            row.push(0);
+        }
+        const data = [];
+        for (let i = 0; i < size; i += 1) {
+            const copy = Object.assign([], row);
+            data.push(copy);
+        }
+        var new_graph = new GraphModel({
+            name: req.body.name,
+            owner: req.body.owner,
+            data: data,
+        });
+        console.log(new_graph);
         new_graph.save(function(err, graph) {
         if (err)
             res.send(err);
         res.json(graph);
     });
+    } else {
+        res.send("Specify a size");
+    }
+
 };
 
 exports.get = function(req, res) {
-    Graph.findById(req.params.graphId, function(err, graph) {
+    GraphModel.findById(req.params.graphId, function(err, graph) {
         if (err)
             res.send(err);
         res.json(graph);
     });
 };
 
-exports.update = function(req, res) {
-    Graph.findOneAndUpdate({_id: req.params.graphId}, req.body, {new: true}, function(err, graph) {
-        if (err)
-            res.send(err);
-        res.json(graph);
-    });
-};
+exports.solve = function(req, res) {
+    if (req.query.method) {
+        GraphModel.findById(req.params.graphId, function(err, graph) {
+            const G = new Graph(graph.data.length);
+            G.load(graph.data);
+            let solution;
+            switch(req.query.method){
+                case "fill":
+                    solution = Solver.fillGraph(G, 3, true);
+                    break;
+                default:
+                    res.send('Method not found');
+            }
+            const response = {
+                solution: solution,
+                graph: graph,
+            };
+            res.json(response);
+        });
+    } else {
+        res.send("Please select a method");
+    }
+}
+
+exports.updateEdge = function(req, res) {
+    if (
+        req.body.from > -1 &&
+        req.body.to > -1 &&
+        Object.hasOwnProperty.call(req.body, 'value')
+    ) {
+        GraphModel.findById(req.params.graphId, function(err, graph) {
+            if (err) {
+                res.send(err);
+            } else {
+                const from = parseInt(req.body.from);
+                const to = parseInt(req.body.to);
+                const value = parseInt(req.body.value);               
+                if (
+                    typeof graph.data[from] !== "undefined" &&
+                    typeof graph.data[from][to] !== "undefined"
+                ) {
+                    graph.data[from][to] = value;
+                    GraphModel.findOneAndUpdate({_id: req.params.graphId}, graph, {new: true}, function(err, graph) {
+                        if (err)
+                            res.send(err);
+                        res.send(graph);
+                    })
+                } else {
+                    res.send('Invalid indexes specified, provide a value from 0-'+(graph.data.length-1));
+                }
+            }
+        });
+    } else {
+        res.send("Please specify from, to, and value")
+    }
+}
 
 exports.delete = function(req, res) {
-    Graph.remove({
+    GraphModel.remove({
         _id: req.params.graphId
     }, function(err, graph) {
         if (err)
             res.send(err);
-        res.json({ message: 'Graph successfully deleted' });
+        res.json({ message: 'GraphModel successfully deleted' });
     });
 };
 

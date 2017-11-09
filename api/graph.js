@@ -1,6 +1,6 @@
 /** Representation of a graph in adjacency matrix format */
 
-export default class Graph {
+let G = class Graph {
     constructor(numberOfVertices) {
         this.matrix = [];
         this.size = numberOfVertices;
@@ -49,3 +49,5 @@ export default class Graph {
         return Object.assign([], this.matrix[node]);
     }
 }
+
+module.exports = G;

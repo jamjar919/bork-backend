@@ -9,6 +9,9 @@ module.exports = function(app) {
 
   app.route('/api/graphs/:graphId')
     .get(graphs.get)
-    .put(graphs.update)
+    .put(graphs.updateEdge)
     .delete(graphs.delete);
+
+  app.route('/api/graphs/:graphId/solve')
+    .get(graphs.solve)
 };
