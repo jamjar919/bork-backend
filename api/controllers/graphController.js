@@ -2,6 +2,7 @@
 
 const Graph = require('../graph');
 const Solver = require('../solvers');
+const Tools = require('../tools')
 
 var mongoose = require('mongoose'),
 GraphModel = mongoose.model('Graph');
@@ -60,7 +61,23 @@ exports.solve = function(req, res) {
             let solution;
             switch(req.query.method){
                 case "fill":
-                    solution = Solver.fillGraph(G, 3, true);
+                    let best = undefined;
+                    let bestSol = [];
+                    let worst = 0;
+                    let worstSol = [];
+                    for (let i = 0; i < 100; i += 1) {
+                        const sol = Solver.fillGraph(G, 2, true);
+                        const cut = Tools.calculatePartition(G, sol);
+                        if (cut > worst) {
+                            worst = cut;
+                            worstSol = sol;
+                        }
+                        if ((cut < best) || !best) {
+                            best = cut;
+                            bestSol = sol;
+                        }
+                    }
+                    solution = bestSol;
                     break;
                 default:
                     res.send('Method not found');

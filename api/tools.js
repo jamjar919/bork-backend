@@ -61,7 +61,7 @@ module.exports.flattenPartition = (partition) => {
 
 module.exports.isValidPartition = (G, partition) => {
     // A partition is valid if it contains all the numbers from 0 - G.size - 1
-    const flat = flattenPartition(partition);
+    const flat = module.exports.flattenPartition(partition);
     for (let i = 0; i < G.size; i += 1) {
         const index = flat.indexOf(i);
         if (index === -1) {
@@ -93,7 +93,7 @@ module.exports.randomGraph = (size, min = 0, max = 5) => {
 module.exports.calculatePartition = (G, partition) => {
     // G is a graph, partition is an array of the form [[0,1,2],[3,4],...[9,10]]
     // where each subarray is a partition
-    if (isValidPartition(G, partition)) {
+    if (module.exports.isValidPartition(G, partition)) {
         let sum = 0;
         for (let i = 0; i < partition.length; i += 1) {
             for (let j = 0; j < partition[i].length; j += 1) {
