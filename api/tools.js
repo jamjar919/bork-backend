@@ -132,8 +132,3 @@ module.exports.heavyEdges = (G, filter = 0.25) => {
     return heavy;
 }
 
-module.exports.heavyClique = (G) => {
-    // Examine edges and identify heavy cliques
-    const edgeList = module.exports.heavyEdges(G)
-    return edgeList;
-}

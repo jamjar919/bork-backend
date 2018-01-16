@@ -107,22 +107,19 @@ module.exports.fillGraph = function (G, n, debug = false) {
     return partitions;
 }
 
-module.exports.coarseGrow = function (G, n, minSize = 6, debug = true) {
+module.exports.coarseGrow = function (G, n, minSize = undefined, debug = true) {
     let log = (m) => {
         console.log(m);
     };
     if (!debug) {
         log = () => {};
     }
+    if (typeof minSize === 'undefined') {
+        minSize = Math.floor(G.size/2) + 1;
+    }
+    log("goal size: "+minSize);
     const mapping = [];
     let currentGraph = G;
-    // Label the nodes so we can refer to them consistently
-    let id = 0;
-    while(id < G.size) {
-        G.label(id, id);
-        currentGraph.label(id, id);
-        id += 1;
-    }    
     let stepNum = 0;
     while (currentGraph.size > minSize) {
         const edges = Tools.heavyEdges(currentGraph);
@@ -132,30 +129,92 @@ module.exports.coarseGrow = function (G, n, minSize = 6, debug = true) {
             break;
         }
         const edge = edges[0];     
-        log("compressing edge "+edge.from+"->"+edge.to)   
+        log("compressing edge "+edge.from+"->"+edge.to+" of weight "+edge.weight)   
         // Create a new edge to represent those nodes
         let node = currentGraph.addNode();
-        log("created node "+id+" (real location "+node+")")
-        id += 1;        
-        // currentGraph.label(id, node);
+        log("    created node "+node)
         
         // Copy nodes to mapping to record structure
         mapping.push({ nodeid: node, nodes: [edge.to, edge.from], step: stepNum });
         // Copy edges from the two nodes to the new one
-        log("copying edges from "+edge.to+","+edge.from+" to "+node)
+        log("    copying edges from "+edge.to+","+edge.from+" to "+node)
         currentGraph.copyEdges(edge.to, node);
         currentGraph.copyEdges(edge.from, node);
         
         // Delete edges
-        log("deleting edges "+edge.to+","+edge.from)
-        currentGraph.deleteNode(currentGraph.label(edge.to))
-        currentGraph.deleteNode(currentGraph.label(edge.from))
-
-        log(currentGraph)
+        log("    deleting edges "+edge.to+","+edge.from)
+        if (edge.to === edge.from) {
+            currentGraph.deleteNode(edge.to)
+        } else {
+            if (edge.to > edge.from) {
+                currentGraph.deleteNode(edge.to)
+                currentGraph.deleteNode(edge.from)
+            } else {
+                currentGraph.deleteNode(edge.from)
+                currentGraph.deleteNode(edge.to)
+            }
+        }
         stepNum += 1;
     }
-    console.log('mapping', mapping); 
-    // Solve the smaller graph problem
-    const solution = module.exports.brute(currentGraph);   
+
+    // Solve the smaller graph problem using previus method
+    let best = undefined;
+    let bestSol = [];
+    let worst = 0;
+    let worstSol = [];
+    for (let i = 0; i < 100; i += 1) {
+        const sol = module.exports.fillGraph(G, n);
+        const cut = Tools.calculatePartition(G, sol);
+        if (cut > worst) {
+            worst = cut;
+            worstSol = sol;
+        }
+        if ((cut < best) || !best) {
+            best = cut;
+            bestSol = sol;
+        }
+    }
+    solution = bestSol;
+
+    let currentSize = currentGraph.size;
+    log("Small solution:")
+    log(solution)
+    // Expand the solution using our saved vertices
+    mapping.reverse();
+    for (let i = 0; i < mapping.length; i += 1) {
+        log("Reversing mapping step "+i)
+        const modification = mapping[i];
+        // The last added node is always the last node in the matrix, node size - 1
+        // Delete this node, and save the partition where it was
+        partitionId = -1;
+        for(let p = 0; p < solution.length; p += 1) {
+            var index = solution[p].indexOf(currentSize - 1);
+            if (index > -1) {
+                log("removing "+(currentSize - 1)+" in partition "+p);
+                partitionId = p;
+                solution[p].splice(index, 1);          
+            }
+        }
+        currentSize += 1;
+        // Simulate readding the nodes where they were by adjusting the other values of the array
+        const sortedNodes = modification.nodes.sort((a, b) => (a-b));
+        console.log(sortedNodes);
+        for (let j = 0; j < sortedNodes.length; j += 1)  {
+            const nodeid = sortedNodes[j];
+            log('    simulating adding '+nodeid)
+            // Add lowest node first
+            solution = solution.map((partition) => partition.map((value) => {
+                if (value >= nodeid) {
+                    value += 1;
+                }
+                return value;
+            }));
+            // Actually readd the node
+            log('    actually adding '+nodeid)
+            solution[partitionId].push(nodeid);            
+        }
+        log(modification);
+        log(solution)
+    }
     return solution;
 }

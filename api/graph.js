@@ -4,7 +4,6 @@ let G = class Graph {
     constructor(numberOfVertices) {
         this.matrix = [];
         this.size = numberOfVertices;
-        this.labels = {};
         const row = [];
         for (let i = 0; i < numberOfVertices; i += 1) {
             row.push(0);
@@ -70,19 +69,6 @@ let G = class Graph {
         return edges;
     }
     deleteNode(node) {
-        // Fix label references
-        for (var key in this.labels) {
-            console.log("key "+key);
-            if (this.labels.hasOwnProperty(key)) {
-                if (this.labels[key] === node) {
-                    this.labels[key] = undefined;
-                }
-                if (this.labels[key] > node) {
-                    console.log("fixing label for "+this.labels[key]);
-                    this.labels[key] = this.labels[key] - 1;
-                }
-            }
-        }
         // Remove references to the node
         for (let i = 0; i < this.size; i += 1) {
             this.matrix[i].splice(node, 1);
@@ -101,15 +87,7 @@ let G = class Graph {
             row.push(0);
         }
         this.matrix.push(row);
-        // add label
-        this.labels[(this.size - 1).toString()] = this.size - 1;
         return this.size - 1;
-    }
-    label(id, value = undefined) {
-        if (typeof value !== 'undefined') {
-            this.labels[id] = value;
-        }
-        return this.labels[id];
     }
     copyEdges(from, to) {
         // Copy edges from one node to another, both directions
