@@ -35,7 +35,7 @@ module.exports.permute = (array) => {
         const arrcopy = Object.assign([], array);
         const el = [arrcopy[i]];
         arrcopy.splice(i, 1);
-        const endings = permute(arrcopy);
+        const endings = module.exports.permute(arrcopy);
         for (let j = 0; j < endings.length; j += 1) {
             const p = el.concat(endings[j]);
             results.push(p);
@@ -107,4 +107,33 @@ module.exports.calculatePartition = (G, partition) => {
         return sum;
     }
     throw Error('Invalid partition of graph');
+}
+
+module.exports.heavyEdges = (G, filter = 0.25) => {
+    const edgeList = G.edges();
+    if (edgeList.length < 1) {
+        return [];
+    }
+    // Calculate average and obtain all above that average
+    let average = 0;
+    for (let i = 0; i < edgeList.length; i += 1) {
+        const edge = edgeList[i];
+        average = average + edge["weight"];
+    }
+    average = average / edgeList.length;
+    // Create limit to make a parameterised list
+    const limit = Math.floor(edgeList[0]["weight"] - (average * filter));
+    const heavy = [];
+    let i = 0;
+    while ((i < edgeList.length) && (edgeList[i]["weight"] > limit)) {
+        heavy.push(edgeList[i]);
+        i += 1
+    }
+    return heavy;
+}
+
+module.exports.heavyClique = (G) => {
+    // Examine edges and identify heavy cliques
+    const edgeList = module.exports.heavyEdges(G)
+    return edgeList;
 }

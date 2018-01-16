@@ -7,7 +7,7 @@ getRandomInt = Tools.getRandomInt,
 addArray = Tools.addArray;
 
 module.exports.brute = function(G) {
-    const permutations = permute(intArray(0, G.size));
+    const permutations = Tools.permute(intArray(0, G.size));
     let bestPartition = [];
     let best = null;
     for (let i = 0; i < permutations.length; i += 1) {
@@ -105,4 +105,57 @@ module.exports.fillGraph = function (G, n, debug = false) {
         }
     }
     return partitions;
+}
+
+module.exports.coarseGrow = function (G, n, minSize = 6, debug = true) {
+    let log = (m) => {
+        console.log(m);
+    };
+    if (!debug) {
+        log = () => {};
+    }
+    const mapping = [];
+    let currentGraph = G;
+    // Label the nodes so we can refer to them consistently
+    let id = 0;
+    while(id < G.size) {
+        G.label(id, id);
+        currentGraph.label(id, id);
+        id += 1;
+    }    
+    let stepNum = 0;
+    while (currentGraph.size > minSize) {
+        const edges = Tools.heavyEdges(currentGraph);
+        
+        // Combine the nodes at the top edge, and create a new graph
+        if (edges.length <= 0) {
+            break;
+        }
+        const edge = edges[0];     
+        log("compressing edge "+edge.from+"->"+edge.to)   
+        // Create a new edge to represent those nodes
+        let node = currentGraph.addNode();
+        log("created node "+id+" (real location "+node+")")
+        id += 1;        
+        // currentGraph.label(id, node);
+        
+        // Copy nodes to mapping to record structure
+        mapping.push({ nodeid: node, nodes: [edge.to, edge.from], step: stepNum });
+        // Copy edges from the two nodes to the new one
+        log("copying edges from "+edge.to+","+edge.from+" to "+node)
+        currentGraph.copyEdges(edge.to, node);
+        currentGraph.copyEdges(edge.from, node);
+        
+        // Delete edges
+        log("deleting edges "+edge.to+","+edge.from)
+        currentGraph.deleteNode(currentGraph.label(edge.to))
+        currentGraph.deleteNode(currentGraph.label(edge.from))
+
+        log(currentGraph)
+        stepNum += 1;
+    }
+    console.log('mapping', mapping); 
+    // Solve the smaller graph problem
+    const solution = module.exports.brute(currentGraph);   
+    return solution;
 }

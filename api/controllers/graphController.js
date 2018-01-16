@@ -79,8 +79,11 @@ exports.solve = function(req, res) {
                     }
                     solution = bestSol;
                     break;
+                case "coarsegrow":
+                    solution = Solver.coarseGrow(G, 2);
+                    break;
                 default:
-                    res.send('Method not found');
+                    res.json({"error": 'Solve method not found'});
             }
             const response = {
                 solution: solution,
