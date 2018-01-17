@@ -102,6 +102,18 @@ let G = class Graph {
             this.weight(i, to, this.weight(i, from) + this.weight(i, to))
         }
     }
+    copy() {
+        // Copy the graph object, and return a new graph
+        const G_dash = new Graph(this.size);
+        const matrix_dash = [];
+        for (let i = 0; i < this.size; i += 1) {
+            matrix_dash.push(
+                Object.assign([], this.matrix[i])
+            )
+        }
+        G_dash.load(matrix_dash);
+        return G_dash;
+    }
 }
 
 module.exports = G;
