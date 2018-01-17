@@ -8,35 +8,90 @@ getRandomInt = Tools.getRandomInt,
 addArray = Tools.addArray;
 
 
-module.exports.partitionResizer = function(G, solution, goalSizes) {
-    console.log(G);
+module.exports.partitionResizer = function(G, solution, goalSizes, debug = false) {
+    let log = (m) => {
+        console.log(m);
+    };
+    if (!debug) {
+        log = () => {};
+    }
     if (solution.length !== goalSizes.length) {
+        console.error("Solution length and sizes length are different")
         return false;
     }
     // If we have different sizes of graph and sum of the partition sizes we obviously cannot make it work 
-    if (goalSizes.reduce((a, b) => (a + b) !== G.size)) {
+    if (goalSizes.reduce((a, b) => (a + b)) !== G.size) {
+        console.error("Sum of the goal sizes is not equal to the size of the Graph")
         return false;
     }
-    // Try and match the partition sizes with the goal sizes
-    const currentSizes = solution.map((array) => array.length);
-    // Check against all permutations of each array to assign sizes in order
-    let bestGoalSizes = [];
-    let bestGoalSizesDifference = null;
-    const permutations = Tools.permute(goalSizes);
-    for (let i = 0; i < permutations.length; i += 1) {
-        const permutation = permutations[i]
-        let difference = 0;
-        for (let j = 0; j < permutation.length; j += 1) {
-            difference += Math.abs(permutation[j] - currentSizes[j]);
-        }
-        if ((bestGoalSizesDifference === null) || (bestGoalSizesDifference > difference)) {
-            bestGoalSizes = permutation;
-            bestGoalSizesDifference = difference;
+    solution.sort((a, b) => (b.length - a.length));
+    goalSizes.sort((a, b) => (b - a));
+    // We are going to greedily swap nodes from the leftmost partition to the rightmost until it's full, choosing the one with lowest cost
+    let leftPointer = 0;
+    let rightPointer = solution.length - 1;
+    // Loop while solution length !== goalsizes on each element of the arrays
+    log("resizing partitions...");
+    while (
+        ! solution.reduce(
+            (a, element, index) => (
+                a && (element.length === goalSizes[index])
+            ),
+            true
+        )
+    ) {
+        log("moving elements...");
+        // Check pointers are from an array that's overfilled
+        if (solution[leftPointer].length <= goalSizes[leftPointer]) {
+            leftPointer += 1
+        } else if (solution[rightPointer].length >= goalSizes[rightPointer]) {
+            // ...and to one that's underfilled
+            rightPointer -= 1;
+        } else {
+            // Start comparing possible moves
+            const possibleMoves = solution[leftPointer];
+            const destination = solution[rightPointer]
+            let bestMove = undefined;
+            let bestScore = undefined;
+            for (let i = 0; i < possibleMoves.length; i += 1) {
+                const nodeToMove = possibleMoves[i];
+                // Calculate the original difference
+                let odifference = 0;
+                for (let j = 0; j < G.size; j += 1) {
+                    if (!(possibleMoves.indexOf(j) > -1)) {
+                        odifference += G.weight(j, nodeToMove) + G.weight(nodeToMove, j);      
+                    }
+                }
+                // Calculate the new difference
+                let difference = 0;
+                for (let j = 0; j < G.size; j += 1) {
+                    if (!(destination.indexOf(j) > -1)) {
+                        difference += G.weight(j, nodeToMove) + G.weight(nodeToMove, j);      
+                    }
+                }
+                // Calculate the difference of ... differences? 
+                const score = difference - odifference;
+                if (score < 0) {
+                    // The node is actually better in the new partition, move it
+                    bestMove = nodeToMove;
+                    break;
+                }
+                if (
+                    (typeof bestMove === 'undefined') || (score < bestScore)   
+                ) {
+                    bestMove = nodeToMove;
+                    bestScore = score;
+                }
+            }
+            // Actually move the node
+            log("moving "+bestMove+" from partition "+leftPointer+" to "+rightPointer);            
+            const index = solution[leftPointer].indexOf(bestMove);
+            if (index > -1) { 
+                solution[leftPointer].splice(index, 1);
+            }
+            solution[rightPointer].push(bestMove);
         }
     }
-    console.log(bestGoalSizesDifference);
-    console.log(bestGoalSizes);
-    console.log(solution);
+    return solution;
 }
 
 
@@ -69,12 +124,11 @@ module.exports.fillGraph = function (G, n, debug = false) {
     // Select n random nodes to fill from
     const seeds = [];
     while (seeds.length < n) {
-        const node = getRandomInt(0, G.size);
+        const node = getRandomInt(0, G.size + 1);
         if (!(seeds.indexOf(node) > -1)) {
             seeds.push(node);
         }
     }
-    log('seeds', seeds);
     const partitions = [];
     // Init partitions array
     for (let i = 0; i < seeds.length; i += 1) {
@@ -141,20 +195,27 @@ module.exports.fillGraph = function (G, n, debug = false) {
     return partitions;
 }
 
-module.exports.coarseGrow = function (G, n, minSize = undefined, debug = false) {
+module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefined, debug = true) {
     let log = (m) => {
         console.log(m);
     };
     if (!debug) {
         log = () => {};
     }
+    if (typeof sizes !== 'undefined') {
+        n = sizes.length;
+    } else {
+        sizes = Tools.getSizes(G.size, n);
+        log("inferred sizes from n as "+sizes)
+    }
     if (typeof minSize === 'undefined') {
-        minSize = Math.floor(G.size/2) + 1;
+        minSize = Math.max(Math.floor(G.size/n) + 1, n);
     }
     log("goal size: "+minSize);
     const mapping = [];
-    const originalSize = Number.parseInt(G.size);
+    const history = [];
     let currentGraph = G.copy();
+    history.push(currentGraph.copy());
     let stepNum = 0;
     while (currentGraph.size > minSize) {
         const edges = Tools.heavyEdges(currentGraph);
@@ -190,7 +251,11 @@ module.exports.coarseGrow = function (G, n, minSize = undefined, debug = false) 
         }
         
         stepNum += 1;
+        history.push(currentGraph.copy());
+        console.log(currentGraph);
     }
+
+    log("Solving small problem...")
     // Solve the smaller graph problem using previus method
     let best = undefined;
     let bestSol = [];
@@ -209,6 +274,7 @@ module.exports.coarseGrow = function (G, n, minSize = undefined, debug = false) 
         }
     }
     let solution = bestSol;
+    log("done")
 
     let currentSize = currentGraph.size;
     log("Small solution:")
@@ -248,8 +314,12 @@ module.exports.coarseGrow = function (G, n, minSize = undefined, debug = false) 
         }
         log(modification);
         log(solution);
+        const tempSizes = Tools.getSizes(currentSize, n);
+        log("    readjusting partitions to sizes"+tempSizes)        
+        solution = module.exports.partitionResizer(history[modification.step], solution, tempSizes, debug)
+        log(solution)
     }
-    const half = Math.floor(originalSize/2);
-    solution = module.exports.partitionResizer(G, solution, [half, originalSize - half])
+    // Fix final partition forever
+    solution = module.exports.partitionResizer(G, solution, sizes, debug)
     return solution;
 }

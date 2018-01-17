@@ -80,7 +80,7 @@ exports.solve = function(req, res) {
                     solution = bestSol;
                     break;
                 case "coarsegrow":
-                    solution = Solver.coarseGrow(G, 2);
+                    solution = Solver.coarseGrow(G, 3);
                     break;
                 default:
                     res.json({"error": 'Solve method not found'});

@@ -109,6 +109,22 @@ module.exports.calculatePartition = (G, partition) => {
     throw Error('Invalid partition of graph');
 }
 
+module.exports.getSizes = (size, n) => {
+    // Sizes partitions based on the an even split between the size of the graph
+    // and the number of partitions
+    const sizes = [];
+    const partitionSize = Math.floor(size/n) + 1;
+    while(
+        (sizes.reduce((a, b) => (a + b), 0) + partitionSize) < size
+    ) {
+        sizes.push(partitionSize)
+    }
+    if (sizes.reduce((a, b) => (a + b), 0) !== size) {
+        sizes.push(size - sizes.reduce((a, b) => (a + b), 0))
+    }
+    return sizes;
+}
+
 module.exports.heavyEdges = (G, filter = 0.25) => {
     const edgeList = G.edges();
     if (edgeList.length < 1) {
