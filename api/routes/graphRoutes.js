@@ -12,6 +12,10 @@ module.exports = function(app) {
     .post(graphs.updateEdge)
     .delete(graphs.delete);
 
+  app.route('/api/graphs/:graphId/names')
+    .get(graphs.getNames)
+    .post(graphs.setNames)
+  
   app.route('/api/graphs/:graphId/solve')
     .get(graphs.solve)
 };

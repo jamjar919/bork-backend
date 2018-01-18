@@ -139,3 +139,40 @@ exports.delete = function(req, res) {
     });
 };
 
+exports.getNames = (req, res) => {
+    GraphModel.findById(req.params.graphId, function(err, graph) {
+        if (err) {
+            res.send(err);
+        }
+        res.json({ names: graph.names })
+    });
+}
+
+exports.setNames = (req, res) => {
+    if (
+        req.body.id > -1 &&
+        Object.hasOwnProperty.call(req.body, 'name')
+    ) {
+        GraphModel.findById(req.params.graphId, function(err, graph) {
+            if (err) {
+                res.send(err);
+            }
+            const value = req.body.name;               
+            const id = parseInt(req.body.id); 
+            const size = graph.data.length;
+            if (
+                (id < size)
+                && (value) 
+            ) {
+                graph.names[id] = value;
+                GraphModel.findOneAndUpdate({_id: req.params.graphId}, graph, {new: true}, function(err, graph) {
+                    if (err)
+                        res.send(err);
+                    res.send(graph);
+                });
+            }
+        });
+    } else {
+        res.json({'error':'Please supply an id in range, and a name'})
+    }
+}
