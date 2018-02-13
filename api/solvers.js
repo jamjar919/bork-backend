@@ -7,6 +7,7 @@ intArray = Tools.intArray,
 getRandomInt = Tools.getRandomInt,
 addArray = Tools.addArray;
 
+const MIN_COARSEGROW_PARTITION_SIZE = 20;
 
 module.exports.partitionResizer = function(G, solution, goalSizes, debug = false) {
     let log = (m) => {
@@ -16,7 +17,7 @@ module.exports.partitionResizer = function(G, solution, goalSizes, debug = false
         log = () => {};
     }
     if (solution.length !== goalSizes.length) {
-        console.error("Solution length and sizes length are different")
+        console.error("Solution length and sizes length are different sizes=",goalSizes," solution=",solution);
         return false;
     }
     // If we have different sizes of graph and sum of the partition sizes we obviously cannot make it work 
@@ -58,14 +59,14 @@ module.exports.partitionResizer = function(G, solution, goalSizes, debug = false
                 let odifference = 0;
                 for (let j = 0; j < G.size; j += 1) {
                     if (!(possibleMoves.indexOf(j) > -1)) {
-                        odifference += G.weight(j, nodeToMove) + G.weight(nodeToMove, j);      
+                        odifference += G.weight(j, nodeToMove);     
                     }
                 }
                 // Calculate the new difference
                 let difference = 0;
                 for (let j = 0; j < G.size; j += 1) {
                     if (!(destination.indexOf(j) > -1)) {
-                        difference += G.weight(j, nodeToMove) + G.weight(nodeToMove, j);      
+                        difference += G.weight(j, nodeToMove);     
                     }
                 }
                 // Calculate the difference of ... differences? 
@@ -195,7 +196,7 @@ module.exports.fillGraph = function (G, n, debug = false) {
     return partitions;
 }
 
-module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefined, debug = true) {
+module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefined, debug = false) {
     let log = (m) => {
         console.log(m);
     };
@@ -209,7 +210,7 @@ module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefin
         log("inferred sizes from n as "+sizes)
     }
     if (typeof minSize === 'undefined') {
-        minSize = Math.max(Math.floor(G.size/n) + 1, n);
+        minSize = Math.min(Math.max(Math.floor(G.size/n) + 1, n), MIN_COARSEGROW_PARTITION_SIZE);
     }
     log("goal size: "+minSize);
     const mapping = [];

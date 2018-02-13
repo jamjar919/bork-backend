@@ -113,9 +113,9 @@ module.exports.getSizes = (size, n) => {
     // Sizes partitions based on the an even split between the size of the graph
     // and the number of partitions
     const sizes = [];
-    const partitionSize = Math.floor(size/n) + 1;
+    const partitionSize = Math.max(Math.floor(size/n), 1);
     while(
-        (sizes.reduce((a, b) => (a + b), 0) + partitionSize) < size
+        (sizes.length + 1 < n)
     ) {
         sizes.push(partitionSize)
     }

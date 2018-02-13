@@ -59,40 +59,67 @@ exports.solve = function(req, res) {
             const G = new Graph(graph.data.length);
             G.load(graph.data);
             let solution;
-            switch(req.query.method){
-                case "fill":
-                    let best = undefined;
-                    let bestSol = [];
-                    let worst = 0;
-                    let worstSol = [];
-                    for (let i = 0; i < 100; i += 1) {
-                        const sol = Solver.fillGraph(G, 2, true);
-                        const cut = Tools.calculatePartition(G, sol);
-                        if (cut > worst) {
-                            worst = cut;
-                            worstSol = sol;
-                        }
-                        if ((cut < best) || !best) {
-                            best = cut;
-                            bestSol = sol;
-                        }
-                    }
-                    solution = bestSol;
-                    break;
-                case "coarsegrow":
-                    solution = Solver.coarseGrow(G, 3);
-                    break;
-                default:
-                    res.json({"error": 'Solve method not found'});
+            let error = false;
+            // Set n and sizes based on params
+            let n = 0;
+            let sizes = undefined;
+            if (parseInt(req.query.n)) {
+                n = parseInt(req.query.n);
             }
-            const response = {
-                solution: solution,
-                graph: graph,
-            };
-            res.json(response);
+            if (req.query.sizes) {
+                req.query.sizes = req.query.sizes.map((x) => parseInt(x));
+                if (req.query.sizes.length === n) {
+                    if (req.query.sizes.reduce((a,b)=>a+b, 0) === G.size) {
+                        sizes = req.query.sizes;
+                    } else {
+                        error = true;
+                        res.json({ error: 'Sizes supplied don\'t match up with the size of the graph' })
+                    }
+                } else {
+                    error = true;
+                    res.json({ error: 'Sizes supplied don\'t match up with the number of partitions' })
+                }
+            }
+            if (!error) {
+                switch(req.query.method){
+                    case "fill":
+                        let best = undefined;
+                        let bestSol = [];
+                        let worst = 0;
+                        let worstSol = [];
+                        for (let i = 0; i < 100; i += 1) {
+                            const sol = Solver.fillGraph(G, n);
+                            const cut = Tools.calculatePartition(G, sol);
+                            if (cut > worst) {
+                                worst = cut;
+                                worstSol = sol;
+                            }
+                            if ((cut < best) || !best) {
+                                best = cut;
+                                bestSol = sol;
+                            }
+                        }
+                        solution = bestSol;
+                        solution = Solver.partitionResizer(G, solution, sizes);
+                        break;
+                    case "coarsegrow":
+                        solution = Solver.coarseGrow(G, n, Math.max(sizes), sizes, true);
+                        break;
+                    default:
+                        error = true;
+                        res.json({"error": 'Solve method not found'});
+                }
+                if (!error) {
+                    const response = {
+                        solution: solution,
+                        graph: graph,
+                    };
+                    res.json(response);
+                }
+            }
         });
     } else {
-        res.send("Please select a method");
+        res.json({error:"Please select a method"});
     }
 }
 
@@ -134,8 +161,8 @@ exports.delete = function(req, res) {
         _id: req.params.graphId
     }, function(err, graph) {
         if (err)
-            res.send(err);
-        res.json({ message: 'GraphModel successfully deleted' });
+            res.json({ success: false, error: err });
+        res.json({ success: true, message: 'GraphModel successfully deleted' });
     });
 };
 

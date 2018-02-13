@@ -22,7 +22,7 @@ let G = class Graph {
         if (typeof value !== 'undefined') {
             this.matrix[from][to] = value;
         }
-        return this.matrix[from][to];
+        return this.matrix[from][to] + this.matrix[to][from];
     }
     adjacent(vertex) {
         const result = [];
@@ -56,11 +56,11 @@ let G = class Graph {
         const edges = [];
         for (let a = 0; a < this.size; a += 1) {
             for (let b = 0; b < this.size; b += 1) {
-                if (this.weight(a,b) !== 0) {
+                if (this.matrix[a][b] !== 0) {
                     edges.push({
                         from: a,
                         to: b,
-                        weight: this.weight(a,b),
+                        weight: this.weight(a, b),
                     });
                 }
             }
@@ -77,7 +77,7 @@ let G = class Graph {
         this.matrix.splice(node, 1); 
         this.size = this.size - 1;
     }
-    addNode(node) {
+    addNode() {
         for (let i = 0; i < this.size; i += 1) {
             this.matrix[i][this.size] = 0;
         }
@@ -95,11 +95,11 @@ let G = class Graph {
         const neighbours = this.neighbours(from);
         // Copy to -> nodes
         for (let i = 0; i < this.size; i += 1) {
-            this.weight(to, i, neighbours[i] + this.weight(to, i))
+            this.matrix[to][i] = neighbours[i] + this.matrix[to][i];
         }
         // Copy nodes -> to
         for (let i = 0; i < this.size; i += 1) {
-            this.weight(i, to, this.weight(i, from) + this.weight(i, to))
+            this.matrix[i][to] = this.matrix[i][from] + this.matrix[i][to];
         }
     }
     copy() {
