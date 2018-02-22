@@ -114,6 +114,13 @@ let G = class Graph {
         G_dash.load(matrix_dash);
         return G_dash;
     }
+    degree(node) {
+        return this.neighbours(node).reduce((a, b) => {
+            if (b !== 0) {
+                a += 1;
+            }
+        }, 0)
+    }
 }
 
 module.exports = G;

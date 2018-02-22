@@ -1,5 +1,6 @@
 const Tools = require('./tools');
 const Graph = require('./graph');
+const mathjs = require('mathjs');
 const permute = Tools.permute,
 calculatePartition = Tools.calculatePartition,
 splitArray = Tools.splitArray,
@@ -194,6 +195,17 @@ module.exports.fillGraph = function (G, n, debug = false) {
         }
     }
     return partitions;
+}
+
+module.exports.spectral = function(G, n, sizes, debug = false) {
+    const adjacency = mathjs.matrix(G.matrix);
+    const degree = mathjs.matrix(mathjs.zeros([G.size, G.size]));
+    // Fill degree matrix
+    for (let i = 0; i < G.size; i += 1) {
+        degree[i][i] = G.degree(i);
+    }
+    const laplacian = adjacency - degree;
+    return [];
 }
 
 module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefined, debug = false) {
