@@ -16,7 +16,6 @@ exports.list_all = function(req, res) {
 };
 
 exports.create = function(req, res) {
-    console.log(req.body);
     if (req.body.size) {
         const size = parseInt(req.body.size);
         const row = [];
@@ -28,10 +27,15 @@ exports.create = function(req, res) {
             const copy = Object.assign([], row);
             data.push(copy);
         }
+        const names = []
+        for (let i = 0; i < size; i += 1) {
+            names.push("Unnamed")
+        }
         var new_graph = new GraphModel({
             name: req.body.name,
             owner: req.body.owner,
             data: data,
+            names: names,
         });
         console.log(new_graph);
         new_graph.save(function(err, graph) {
@@ -186,10 +190,8 @@ exports.setNames = (req, res) => {
             }
             const value = req.body.name;               
             const id = parseInt(req.body.id); 
-            const size = graph.data.length;
             if (
-                (id < size)
-                && (value) 
+                (value) 
             ) {
                 graph.names[id] = value;
                 GraphModel.findOneAndUpdate({_id: req.params.graphId}, graph, {new: true}, function(err, graph) {
