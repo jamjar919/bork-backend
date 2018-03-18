@@ -60,3 +60,4 @@ typings/
 # Get rid of db data
 db/data
 db/log
+db/config.cfg
