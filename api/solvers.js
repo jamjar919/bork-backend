@@ -11,6 +11,9 @@ addArray = Tools.addArray;
 const MIN_COARSEGROW_PARTITION_SIZE = 20;
 
 module.exports.partitionResizer = function(G, solution, goalSizes, debug = false) {
+    if (!goalSizes) {
+        console.error("Goal sizes not defined",goalSizes)
+    }
     let log = (m) => {
         console.log(m);
     };

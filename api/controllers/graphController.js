@@ -29,7 +29,7 @@ exports.create = function(req, res) {
         }
         const names = []
         for (let i = 0; i < size; i += 1) {
-            names.push("Unnamed")
+            names.push(`Node ${i.toString()}`)
         }
         var new_graph = new GraphModel({
             name: req.body.name,
@@ -83,6 +83,9 @@ exports.solve = function(req, res) {
                     error = true;
                     res.json({ error: 'Sizes supplied don\'t match up with the number of partitions' })
                 }
+            } else {
+                // Make sizes based on n
+                sizes = Tools.getSizes(G.size, n)
             }
             if (!error) {
                 switch(req.query.method){
