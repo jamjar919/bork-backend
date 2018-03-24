@@ -1,6 +1,7 @@
 const Tools = require('./tools');
 const Graph = require('./graph');
 const mathjs = require('mathjs');
+const numeric = require('numericjs');
 const permute = Tools.permute,
 calculatePartition = Tools.calculatePartition,
 splitArray = Tools.splitArray,
@@ -9,6 +10,9 @@ getRandomInt = Tools.getRandomInt,
 addArray = Tools.addArray;
 
 const MIN_COARSEGROW_PARTITION_SIZE = 20;
+
+// Import numeric.js into math.js
+mathjs.import(numeric, {wrap: true, silent: true});
 
 module.exports.partitionResizer = function(G, solution, goalSizes, debug = false) {
     if (!goalSizes) {
@@ -99,6 +103,76 @@ module.exports.partitionResizer = function(G, solution, goalSizes, debug = false
     return solution;
 }
 
+module.exports.simplify = function (G, n, sizes, solver, solverArguments = []) {
+    // Simplify a graph by removing all nodes with no connections
+    let removedNodes = [];
+    const remainingNodes = [];
+    for (let node = 0; node < G.size; node += 1) {
+        const neighbours = G.neighbours(node).concat(G.edgesTo(node));
+        if (
+            neighbours.reduce((a, b) =>  a + b, 0) === 0
+        ) {
+            removedNodes.push(node);
+        } else {
+            remainingNodes.push(node);
+        }
+    }
+
+    // Actual remove
+    const G_dash = G.copy();
+    removedNodes = removedNodes.sort((a, b) => b - a);
+    for (let i = 0; i < removedNodes.length; i += 1) {
+        G_dash.deleteNode(removedNodes[i]);
+    }
+
+    // Calculate proportionate sizes and n
+    sizes = sizes.sort((a, b) => a - b)
+    let sizes_dash = Object.assign([], sizes);
+    let numToRemove = removedNodes.length;
+    for (let i = 0; i < sizes_dash.length; i += 1) {
+        while (
+            (sizes_dash[i] > 0) &&
+            (numToRemove > 0)
+        ) {
+            sizes_dash[i] -= 1;
+            numToRemove -= 1;
+        }
+    }
+    // Remove all zero'd and change n to reflect
+    while(sizes_dash.indexOf(0) !== -1) {
+        sizes_dash.splice(sizes_dash.indexOf(0), 1);
+    }
+    n_dash = sizes_dash.length; 
+
+    // Get the solution for the smaller graph
+    let solution = solver(G_dash, n_dash, sizes_dash, ...solverArguments)
+
+    // Map solution back onto original nodes
+    solution = solution.map(
+        (val, index) => val.map((n, index) => remainingNodes[n])
+    )
+
+    // Add back all the missing nodes (it doesn't matter where we add them as the contribution to the cut is non existent)
+    while (sizes_dash.length !== sizes.length) {
+        sizes_dash.push(0)
+        solution.push([])
+    }
+    sizes_dash = sizes_dash.sort((a, b) => b - a);
+    sizes = sizes.sort((a, b) => b - a);
+
+    // Add to the smallest partitions until goal sizes are equal
+    currentPartitionToAddTo = 0;
+    for (let i = 0; i < removedNodes.length; i += 1) {
+        while (
+            sizes[currentPartitionToAddTo] === sizes_dash[currentPartitionToAddTo]
+        ) {
+            currentPartitionToAddTo += 1;
+        }
+        solution[currentPartitionToAddTo].push(removedNodes[i]);
+        sizes_dash[currentPartitionToAddTo] += 1;
+    }
+    return solution;
+}
 
 module.exports.brute = function(G) {
     const permutations = Tools.permute(intArray(0, G.size));
@@ -119,7 +193,7 @@ module.exports.brute = function(G) {
     return bestPartition;
 }
 
-module.exports.fillGraph = function (G, n, debug = false) {
+module.exports.fillGraph = function (G, n, sizes = [], debug = false) {
     let log = (m) => {
         console.log(m);
     };
@@ -201,17 +275,77 @@ module.exports.fillGraph = function (G, n, debug = false) {
 }
 
 module.exports.spectral = function(G, n, sizes, debug = false) {
-    const adjacency = mathjs.matrix(G.matrix);
+    // https://snap.stanford.edu/class/cs224w-readings/Pothen89Partition.pdf
+    // http://research.nvidia.com/sites/default/files/pubs/2016-03_Parallel-Spectral-Graph/nvr-2016-001.pdf
+    // numeric js http://www.numericjs.com/
+    // how to get eigenvectors https://github.com/josdejong/mathjs/blob/master/examples/import.js#L59-L73
+    let adjacency = mathjs.matrix(mathjs.zeros([G.size, G.size]));
+
+    // Setup the matrix
+    for (let i = 0; i < G.size; i += 1) {
+        for (let j = 0; j < G.size; j += 1) {
+            adjacency._data[i][j] = (G.weight(i, j) ? 1 : 0)
+        }
+    }
     const degree = mathjs.matrix(mathjs.zeros([G.size, G.size]));
+
     // Fill degree matrix
     for (let i = 0; i < G.size; i += 1) {
-        degree[i][i] = G.degree(i);
+        degree._data[i][i] = G.degree(i);
     }
-    const laplacian = adjacency - degree;
-    return [];
+    // Make laplacian matrix
+    adjacency = mathjs.multiply(-1,adjacency);
+    const laplacian = mathjs.add(adjacency, degree);
+
+    // Get eigenvalues
+    const e = mathjs.eig(laplacian);
+    let eigenvalues = e.lambda.x;
+    const eigenvectors = e.E.x
+
+    // Extract fieldler vector (second smallest eigenvector)
+    const fieldler = eigenvalues.sort()[1]
+    const fieldlerVector = eigenvectors[eigenvalues.indexOf(fieldler)]
+
+    // Partition by sign initially
+    let solution = [[], []];
+    for (let i = 0; i < G.size; i += 1) {
+        if (fieldlerVector[i] > 0) {
+            solution[0].push({
+                node: i,
+                vec: fieldlerVector[i],
+            })
+        } else {
+            solution[1].push({
+                node: i,
+                vec: fieldlerVector[i],
+            })
+        }
+    }
+
+    // This does not often produce balanced partitions so check the closeness of each to the other partition by sorting by size
+    solution = solution.map((val) => {
+        return val.sort((a,b) => Math.abs(a.vec) - Math.abs(b.vec));
+    })
+    solution = solution.sort((a,b) => {
+        return b.length - a.length
+    })
+    sizes = sizes.sort((a,b) => {
+        a - b
+    })
+    let i = 0;
+    while (
+        solution[0].length !== sizes[0]
+    ) {
+        // take the smallest member of partition zero (the larger one) and move it
+        const element = solution[0][0];
+        solution[0].splice(0, 1)
+        solution[1].push(element)
+    }
+    solution = solution.map((partition) => partition.map(v => v.node));
+    return solution;
 }
 
-module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefined, debug = false) {
+module.exports.coarseGrow = function (G, n, sizes = undefined, minSize = undefined, debug = false) {
     let log = (m) => {
         console.log(m);
     };
@@ -268,7 +402,6 @@ module.exports.coarseGrow = function (G, n, minSize = undefined, sizes = undefin
         
         stepNum += 1;
         history.push(currentGraph.copy());
-        console.log(currentGraph);
     }
 
     log("Solving small problem...")

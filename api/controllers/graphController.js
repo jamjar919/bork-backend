@@ -90,12 +90,13 @@ exports.solve = function(req, res) {
             if (!error) {
                 switch(req.query.method){
                     case "fill":
+                        console.log("Using Fill")
                         let best = undefined;
                         let bestSol = [];
                         let worst = 0;
                         let worstSol = [];
                         for (let i = 0; i < 100; i += 1) {
-                            const sol = Solver.fillGraph(G, n);
+                            const sol = Solver.simplify(G, n, sizes, Solver.fillGraph);
                             const cut = Tools.calculatePartition(G, sol);
                             if (cut > worst) {
                                 worst = cut;
@@ -110,7 +111,12 @@ exports.solve = function(req, res) {
                         solution = Solver.partitionResizer(G, solution, sizes);
                         break;
                     case "coarsegrow":
-                        solution = Solver.coarseGrow(G, n, Math.max(sizes), sizes, true);
+                        console.log("Using CoarseGrow")
+                        const maxSize = Math.max(...sizes);
+                        solution = Solver.simplify(G, n, sizes, Solver.coarseGrow, [maxSize]);
+                        break;
+                    case "spectral":
+                        solution = Solver.simplify(G, n, sizes, Solver.spectral, [true]);
                         break;
                     default:
                         error = true;

@@ -21,7 +21,8 @@
     "body-parser": "^1.18.2",
     "express": "^4.16.2",
     "mathjs": "^4.0.1",
-    "mongoose": "^4.13.0"
+    "mongoose": "^4.13.0",
+    "numericjs": "^1.2.6"
   },
   "devDependencies": {
     "nodemon": "^1.12.1"

@@ -52,6 +52,24 @@ let G = class Graph {
     neighbours(node) {
         return Object.assign([], this.matrix[node]);
     }
+    edgesTo(node) {
+        const edges = [];
+        for (let i = 0; i < this.size; i += 1) {
+            edges.push(
+                this.matrix[i][node]
+            )
+        }
+        return edges;
+    }
+    nodesTo(node) {
+        const nodes = [];
+        for (let i = 0; i < this.size; i += 1) {
+            if (this.matrix[i][node]) {
+                nodes.push(i)
+            }
+        }
+        return nodes;
+    }
     edges() {
         const edges = [];
         for (let a = 0; a < this.size; a += 1) {
@@ -70,12 +88,16 @@ let G = class Graph {
     }
     deleteNode(node) {
         // Remove references to the node
-        for (let i = 0; i < this.size; i += 1) {
-            this.matrix[i].splice(node, 1);
+        if (node < this.size) {
+            for (let i = 0; i < this.size; i += 1) {
+                this.matrix[i].splice(node, 1);
+            }
+            // Remove the row
+            this.matrix.splice(node, 1); 
+            this.size = this.size - 1;
+        } else {
+            throw `Trying to remove a node that isn't in the graph (node ${node.toString()}, size is ${this.size})`
         }
-        // Remove the row
-        this.matrix.splice(node, 1); 
-        this.size = this.size - 1;
     }
     addNode() {
         for (let i = 0; i < this.size; i += 1) {
@@ -115,11 +137,14 @@ let G = class Graph {
         return G_dash;
     }
     degree(node) {
-        return this.neighbours(node).reduce((a, b) => {
-            if (b !== 0) {
-                a += 1;
-            }
-        }, 0)
+        const adjacent = this.adjacent(node);
+        const pointingTo = this.nodesTo(node);
+        let nodes = adjacent.concat(pointingTo).sort();
+        // dedupe
+        nodes = nodes.filter((val, index, array) => {
+            return (index === 0) || (array[index - 1] !== val)
+        })
+        return nodes.length;
     }
 }
 
