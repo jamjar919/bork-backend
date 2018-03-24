@@ -284,7 +284,7 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     // Setup the matrix
     for (let i = 0; i < G.size; i += 1) {
         for (let j = 0; j < G.size; j += 1) {
-            adjacency._data[i][j] = (G.weight(i, j) ? 1 : 0)
+            adjacency._data[i][j] = G.weight(i, j)
         }
     }
     const degree = mathjs.matrix(mathjs.zeros([G.size, G.size]));
