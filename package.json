@@ -22,6 +22,7 @@
     "express": "^4.16.2",
     "mathjs": "^4.0.1",
     "mongoose": "^4.13.0",
+    "node-fetch": "^2.1.2",
     "numericjs": "^1.2.6"
   },
   "devDependencies": {

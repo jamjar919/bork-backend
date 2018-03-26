@@ -89,6 +89,9 @@ exports.solve = function(req, res) {
             }
             if (!error) {
                 switch(req.query.method){
+                    case "rand":
+                        solution = Solver.random(G, n, sizes);
+                        break;
                     case "fill":
                         console.log("Using Fill")
                         let best = undefined;
@@ -123,9 +126,14 @@ exports.solve = function(req, res) {
                         res.json({"error": 'Solve method not found'});
                 }
                 if (!error) {
+                    // Rate how good the solution is 
+                    const solutionInfo = {
+                        cutweight: Tools.calculatePartition(G, solution),
+                    };
                     const response = {
                         solution: solution,
                         graph: graph,
+                        solutionInfo: solutionInfo,
                     };
                     res.json(response);
                 }
@@ -142,6 +150,7 @@ exports.updateEdge = function(req, res) {
         req.body.to > -1 &&
         Object.hasOwnProperty.call(req.body, 'value')
     ) {
+
         GraphModel.findById(req.params.graphId, function(err, graph) {
             if (err) {
                 res.send(err);

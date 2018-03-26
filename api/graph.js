@@ -146,6 +146,16 @@ let G = class Graph {
         })
         return nodes.length;
     }
+    maxEdgeWeight() {
+        let max = 0;
+        for (let i = 0; i < this.size; i += 1) {
+            const a = Math.max(...this.matrix[i])
+            if (a > max) {
+                max = a
+            }
+        }
+        return max;
+    }   
 }
 
 module.exports = G;

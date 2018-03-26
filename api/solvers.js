@@ -14,6 +14,24 @@ const MIN_COARSEGROW_PARTITION_SIZE = 20;
 // Import numeric.js into math.js
 mathjs.import(numeric, {wrap: true, silent: true});
 
+module.exports.random = function(G, n, sizes) {
+    // Generate a random partition
+    const nodesLeft = [];
+    for (let i = 0; i < G.size; i += 1) {
+        nodesLeft.push(i);
+    }
+    const solution = [];
+    for (let p = 0; p < n; p += 1) {
+        solution.push([])
+        for (let i = 0; i < sizes[p]; i += 1) {
+            const index = getRandomInt(0, nodesLeft.length + 1);
+            const node = nodesLeft.splice(index, 1)[0];
+            solution[p].push(node);
+        }
+    }
+    return solution
+}
+
 module.exports.partitionResizer = function(G, solution, goalSizes, debug = false) {
     if (!goalSizes) {
         console.error("Goal sizes not defined",goalSizes)
@@ -104,6 +122,7 @@ module.exports.partitionResizer = function(G, solution, goalSizes, debug = false
 }
 
 module.exports.simplify = function (G, n, sizes, solver, solverArguments = []) {
+    console.log("Simplifying input graph...")
     // Simplify a graph by removing all nodes with no connections
     let removedNodes = [];
     const remainingNodes = [];
@@ -144,8 +163,11 @@ module.exports.simplify = function (G, n, sizes, solver, solverArguments = []) {
     }
     n_dash = sizes_dash.length; 
 
+    console.log(`Simplified original graph of size ${G.size} to ${G_dash.size}`)
     // Get the solution for the smaller graph
     let solution = solver(G_dash, n_dash, sizes_dash, ...solverArguments)
+
+    console.log(`Solved`);
 
     // Map solution back onto original nodes
     solution = solution.map(
@@ -279,8 +301,19 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     // http://research.nvidia.com/sites/default/files/pubs/2016-03_Parallel-Spectral-Graph/nvr-2016-001.pdf
     // numeric js http://www.numericjs.com/
     // how to get eigenvectors https://github.com/josdejong/mathjs/blob/master/examples/import.js#L59-L73
-    let adjacency = mathjs.matrix(mathjs.zeros([G.size, G.size]));
 
+    // Sanity check
+    if (!(sizes.length > 1)) {
+        // There's only one partition just return all the nodes
+        const solution = [[]];
+        for (let i = 0; i < G.size; i += 1) {
+            solution[0].push(i)
+        }
+        return solution;
+    }
+
+    let adjacency = mathjs.matrix(mathjs.zeros([G.size, G.size]));
+    const max = G.maxEdgeWeight();
     // Setup the matrix
     for (let i = 0; i < G.size; i += 1) {
         for (let j = 0; j < G.size; j += 1) {
@@ -296,6 +329,8 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     // Make laplacian matrix
     adjacency = mathjs.multiply(-1,adjacency);
     const laplacian = mathjs.add(adjacency, degree);
+
+    console.log(laplacian)
 
     // Get eigenvalues
     const e = mathjs.eig(laplacian);
