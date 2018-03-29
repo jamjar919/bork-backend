@@ -317,20 +317,18 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     // Setup the matrix
     for (let i = 0; i < G.size; i += 1) {
         for (let j = 0; j < G.size; j += 1) {
-            adjacency._data[i][j] = G.weight(i, j)
+            adjacency._data[i][j] = G.weight(i, j) >= 0 ? Math.sqrt(G.weight(i, j)) : -(Math.sqrt(Math.abs(G.weight(i, j))))
         }
     }
     const degree = mathjs.matrix(mathjs.zeros([G.size, G.size]));
 
     // Fill degree matrix
     for (let i = 0; i < G.size; i += 1) {
-        degree._data[i][i] = G.degree(i);
+        degree._data[i][i] = adjacency._data[i].reduce((a, b) => a + b, 0);
     }
     // Make laplacian matrix
     adjacency = mathjs.multiply(-1,adjacency);
     const laplacian = mathjs.add(adjacency, degree);
-
-    console.log(laplacian)
 
     // Get eigenvalues
     const e = mathjs.eig(laplacian);
@@ -338,47 +336,100 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     const eigenvectors = e.E.x
 
     // Extract fieldler vector (second smallest eigenvector)
-    const fieldler = eigenvalues.sort()[1]
+    eigenvalues.sort()
+    const fieldler = eigenvalues[1]
     const fieldlerVector = eigenvectors[eigenvalues.indexOf(fieldler)]
 
-    // Partition by sign initially
+    // Partition by median initially
+    const median = mathjs.median(fieldlerVector);
+
     let solution = [[], []];
     for (let i = 0; i < G.size; i += 1) {
-        if (fieldlerVector[i] > 0) {
-            solution[0].push({
-                node: i,
-                vec: fieldlerVector[i],
-            })
+        if (fieldlerVector[i] > median) {
+            solution[0].push(i)
         } else {
-            solution[1].push({
-                node: i,
-                vec: fieldlerVector[i],
-            })
+            solution[1].push(i)
         }
     }
 
-    // This does not often produce balanced partitions so check the closeness of each to the other partition by sorting by size
-    solution = solution.map((val) => {
-        return val.sort((a,b) => Math.abs(a.vec) - Math.abs(b.vec));
-    })
-    solution = solution.sort((a,b) => {
-        return b.length - a.length
-    })
-    sizes = sizes.sort((a,b) => {
-        a - b
-    })
-    let i = 0;
-    while (
-        solution[0].length !== sizes[0]
-    ) {
-        // take the smallest member of partition zero (the larger one) and move it
-        const element = solution[0][0];
-        solution[0].splice(0, 1)
-        solution[1].push(element)
-    }
-    solution = solution.map((partition) => partition.map(v => v.node));
+    // Improve using KernighanLin greedy algorithm
+    solution = KernighanLin(G, solution);
+
     return solution;
 }
+
+function KernighanLin(G, solution) {
+    // Partition improver for bisections
+    // O(n^2 log n)
+    // Check solution is balanced
+    if (!Tools.isValidPartition(G, solution)) {
+        throw "Not a valid partition of G";
+        return false;
+    }
+    // Deepcopy to destroy reference
+    const A = Object.assign([], solution[0])
+    const B = Object.assign([], solution[1])
+    const gv = [];
+    const av = [];
+    const bv = [];
+    // Calculate D array
+    for (let n = 0; n < Math.floor(G.size/2); n += 1) {
+        let D = Tools.differenceArray(G, [A, B])
+        // Find a from A and b from B such that g = Da + Db - 2*c(a,b) is maximised
+        let currentMax = undefined;
+        let currentA = -1;
+        let currentB = -1;
+        // Loop over a's and b's
+        for (let ai = 0; ai < A.length; ai += 1) {
+            const a = A[ai];
+            for (let bi = 0; bi < B.length; bi += 1) {
+                const b = B[bi];
+                const g = D[a] + D[b] - 2*G.weight(a, b)
+                if (
+                    (typeof currentMax === 'undefined') || (currentMax < g)
+                ) {
+                    currentMax = g;
+                    currentA = a;
+                    currentB = b;
+                }
+            }
+        }
+        gv.push(currentMax)
+        av.push(currentA)
+        bv.push(currentB)
+        // Remove a, b from A, B
+        A.splice(A.indexOf(currentA), 1)
+        B.splice(B.indexOf(currentB), 1)
+    }
+    // Find k maximising sum of g_0 ... g_k
+    const K = [];
+    for (let i = 0; i < gv.length; i += 1) {
+        K.push(
+            (i === 0) ? gv[0] : gv[i] + K[i - 1]
+        )
+    }
+    let currentMax = K[0];
+    let currentMaxIndex = 0;
+    for (let i = 0; i < K.length; i += 1) {
+        if (K[i] > currentMax) {
+            currentMax = K[i]
+            currentMaxIndex = i;
+        }
+    }
+    const k = currentMaxIndex;
+    console.log(gv, av, bv)
+    console.log(K, k)
+    // Execute swaps 0..k
+    for (let i = 0; i < k + 1; i += 1) {
+        // Swap av[i] with bv[i] in solution
+        solution[0].splice(solution[0].indexOf(av[i]), 1)
+        solution[1].splice(solution[1].indexOf(bv[i]), 1)
+        solution[0].push(bv[i])
+        solution[1].push(av[i])
+    }
+    return solution;
+}
+
 
 module.exports.coarseGrow = function (G, n, sizes = undefined, minSize = undefined, debug = false) {
     let log = (m) => {

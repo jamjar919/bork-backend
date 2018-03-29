@@ -148,3 +148,73 @@ module.exports.heavyEdges = (G, filter = 0.25) => {
     return heavy;
 }
 
+module.exports.internalEdges = (G, partition, returnArray = false) => {
+    // Count the weight of the internal edges of a partition
+    let sum = 0;
+    let array = [];
+    for (let i = 0; i < partition.length; i += 1) {
+        const from = partition[i];
+        array.push(0)
+        for (let j = 0; j < partition.length; j += 1) {
+            const to = partition[j];
+            array[i] += G.weight(from, to)
+            sum += G.weight(from, to)
+        }
+    }
+    if (returnArray)
+        return array;
+    return sum;
+}
+
+module.exports.externalEdges = (G, partition, returnArray = false) => {
+    // Count the edges from a partition to the rest of the graph
+    let sum = 0;
+    const array = [];
+    // Create a mapping to speed up lookup
+    const inPartition = [];
+    for (let i = 0; i < G.size; i += 1) {
+        inPartition.push(
+            partition.indexOf(i) !== -1
+        )
+    }
+    for (let i = 0; i < partition.length; i += 1) {
+        const from = partition[i]
+        array.push(0)
+        for (let j = 0; j < G.size; j += 1) {
+            const to = j;
+            if (!inPartition[j]) {
+                array[i] += G.weight(from, to)
+                sum += G.weight(from, to)
+            }
+        }
+    }
+    if (returnArray)
+        return array;
+    return sum;
+}
+
+module.exports.differenceArray = (G, solution) => {
+    // Produce difference array for Kernighan Lin
+    // Create a mapping to speed up lookup
+    const partition = [];
+    for (let i = 0; i < G.size; i += 1) {
+        partition.push(
+            (solution[0].indexOf(i) !== -1) ? 0 : 1
+        )
+    }
+    const D = []
+    for (let node = 0; node < G.size; node += 1) {
+        // Calculate internal/external cost
+        let internal = 0;
+        let external = 0;
+        for (let to = 0; to < G.size; to += 1) {
+            if (partition[to] === partition[node]) {
+                internal += G.weight(node, to)
+            } else {
+                external += G.weight(node, to)
+            }
+        }
+        D.push(external - internal)
+    }
+    return D;
+}

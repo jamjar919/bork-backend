@@ -129,7 +129,14 @@ exports.solve = function(req, res) {
                     // Rate how good the solution is 
                     const solutionInfo = {
                         cutweight: Tools.calculatePartition(G, solution),
+                        partitionInfo: [],
                     };
+                    solution.forEach((partition) => {
+                        solutionInfo.partitionInfo.push({
+                            internalWeight: Tools.internalEdges(G, partition),
+                            externalWeight: Tools.externalEdges(G, partition),
+                        })
+                    })
                     const response = {
                         solution: solution,
                         graph: graph,
