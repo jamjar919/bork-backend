@@ -311,7 +311,7 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
         }
         return solution;
     }
-
+    
     let adjacency = mathjs.matrix(mathjs.zeros([G.size, G.size]));
     const max = G.maxEdgeWeight();
     // Setup the matrix
@@ -353,7 +353,16 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     }
 
     // Improve using KernighanLin greedy algorithm
+    let lastQuality = Tools.calculatePartition(G, solution);
     solution = KernighanLin(G, solution);
+    let quality = Tools.calculatePartition(G, solution);
+    console.log(lastQuality, quality)
+    while (quality < lastQuality) {
+        lastQuality = quality;
+        solution = KernighanLin(G, solution);
+        quality = Tools.calculatePartition(G, solution);
+        console.log(lastQuality, quality)
+    }
 
     return solution;
 }
@@ -417,8 +426,6 @@ function KernighanLin(G, solution) {
         }
     }
     const k = currentMaxIndex;
-    console.log(gv, av, bv)
-    console.log(K, k)
     // Execute swaps 0..k
     for (let i = 0; i < k + 1; i += 1) {
         // Swap av[i] with bv[i] in solution
