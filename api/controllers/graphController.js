@@ -115,8 +115,7 @@ exports.solve = function(req, res) {
                         break;
                     case "coarsegrow":
                         console.log("Using CoarseGrow")
-                        const maxSize = Math.max(...sizes);
-                        solution = Solver.simplify(G, n, sizes, Solver.coarseGrow, [maxSize]);
+                        solution = Solver.simplify(G, n, sizes, Solver.coarseGrow);
                         break;
                     case "spectral":
                         solution = Solver.simplify(G, n, sizes, Solver.spectral, [true]);
