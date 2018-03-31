@@ -164,6 +164,11 @@ module.exports.simplify = function (G, n, sizes, solver, solverArguments = []) {
     n_dash = sizes_dash.length; 
 
     console.log(`Simplified original graph of size ${G.size} to ${G_dash.size}`)
+
+    // Identify connected components of the graph
+    const components = Tools.connectedComponents(G_dash);
+    console.log(`${components.length} connected components of sizes ${components.map(val => val.length)}`)
+
     // Get the solution for the smaller graph
     let solution = solver(G_dash, n_dash, sizes_dash, ...solverArguments)
 
@@ -311,6 +316,19 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
         }
         return solution;
     }
+
+    console.log(sizes)
+    let sizesNext = []
+    if (sizes.length > 2) {
+        sizesNext = Object.assign([], sizes)
+        // Make the smallest partitions first
+        console.log("sizesnext",sizesNext)
+        sizesNext.splice(0, 1)
+        const goalSizes = [sizes[0], 0]
+        goalSizes[1] = sizes.reduce((a, v) => a + v, 0) - sizes[0];
+        sizes = goalSizes
+        console.log(sizes)
+    }
     
     let adjacency = mathjs.matrix(mathjs.zeros([G.size, G.size]));
     const max = G.maxEdgeWeight();
@@ -340,30 +358,89 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     const fieldler = eigenvalues[1]
     const fieldlerVector = eigenvectors[eigenvalues.indexOf(fieldler)]
 
-    // Partition by median initially
+    // Partition by sign initially
     const median = mathjs.median(fieldlerVector);
 
     let solution = [[], []];
     for (let i = 0; i < G.size; i += 1) {
         if (fieldlerVector[i] > median) {
-            solution[0].push(i)
+            solution[0].push({
+                    node: i,
+                    val: fieldlerVector[i]
+                })
         } else {
-            solution[1].push(i)
+            solution[1].push({
+                node: i,
+                val: fieldlerVector[i]
+            })
         }
     }
+
+    // While solution is not of the correct sizes
+    solution[0].sort((a,b) => b.val - a.val)
+    solution[1].sort((a,b) => b.val - a.val)
+    // identify the more strongly connected part of the graph
+    const cohesiveness0 = Tools.internalEdges(G, solution[0].map((val) => val.node));
+    const cohesiveness1 = Tools.internalEdges(G, solution[1].map((val) => val.node));
+    let takeFrom = 0;
+    if (cohesiveness0 > cohesiveness1) {
+        takeFrom = 1;
+    }
+
+    // We have always that every node in solution[0] has higher val than every node in solution[1]
+    while (!(
+        (
+            (solution[0].length === sizes[0]) &&
+            (solution[1].length === sizes[1])
+        ) || (
+            (solution[0].length === sizes[1]) &&
+            (solution[1].length === sizes[0])
+        )
+     )) {
+        if (takeFrom === 0) {
+            // Move smallest node to the next partition
+            const node = solution[0].splice(-1, 1)[0]
+            solution[1].push(node)
+        } else {
+            // Move largest node to the next partition
+            const node = solution[1].splice(1, 1)[0]
+            solution[0].push(node)
+        }
+    }
+
+    solution = solution.map(val => val.map((val) => val.node))
 
     // Improve using KernighanLin greedy algorithm
     let lastQuality = Tools.calculatePartition(G, solution);
     solution = KernighanLin(G, solution);
     let quality = Tools.calculatePartition(G, solution);
-    console.log(lastQuality, quality)
     while (quality < lastQuality) {
         lastQuality = quality;
         solution = KernighanLin(G, solution);
         quality = Tools.calculatePartition(G, solution);
-        console.log(lastQuality, quality)
     }
 
+    // Smallest partition is removed
+    solution.sort((a, b) => a.length-b.length)
+
+    if (sizesNext.length !== 0) {
+        // recurse into next sol
+        // Remove nodes in smallest partition
+        const removedNodes = solution[0]
+        removedNodes.sort((a, b) => b-a)
+        const remainingNodes = Tools.intArray(0, G.size)
+        const G_dash = G.copy();
+        for (let i = 0; i < removedNodes.length; i += 1) {
+            G_dash.deleteNode(removedNodes[i])
+            remainingNodes.splice(remainingNodes.indexOf(removedNodes[i]), 1)
+        }
+        solution = [solution[0]]
+        console.log("recursing into graph of size",G_dash.size," goal sizes ",sizesNext)
+        let solution_dash = module.exports.spectral(G_dash, sizesNext.length, sizesNext) 
+        // Remap to original nodes
+        solution_dash = solution_dash.map((val) => val.map(val => remainingNodes[val]))
+        solution = solution.concat(solution_dash)      
+    }
     return solution;
 }
 
@@ -382,7 +459,8 @@ function KernighanLin(G, solution) {
     const av = [];
     const bv = [];
     // Calculate D array
-    for (let n = 0; n < Math.floor(G.size/2); n += 1) {
+    const minPartitionSize = Math.min(solution.map(val => val.length))
+    for (let n = 0; n < Math.floor(minPartitionSize); n += 1) {
         let D = Tools.differenceArray(G, [A, B])
         // Find a from A and b from B such that g = Da + Db - 2*c(a,b) is maximised
         let currentMax = undefined;
@@ -427,13 +505,16 @@ function KernighanLin(G, solution) {
     }
     const k = currentMaxIndex;
     // Execute swaps 0..k
-    for (let i = 0; i < k + 1; i += 1) {
-        // Swap av[i] with bv[i] in solution
-        solution[0].splice(solution[0].indexOf(av[i]), 1)
-        solution[1].splice(solution[1].indexOf(bv[i]), 1)
-        solution[0].push(bv[i])
-        solution[1].push(av[i])
+    if (currentMax > 0) {
+        for (let i = 0; i < k + 1; i += 1) {
+            // Swap av[i] with bv[i] in solution
+            solution[0].splice(solution[0].indexOf(av[i]), 1)
+            solution[1].splice(solution[1].indexOf(bv[i]), 1)
+            solution[0].push(bv[i])
+            solution[1].push(av[i])
+        }
     }
+    
     return solution;
 }
 

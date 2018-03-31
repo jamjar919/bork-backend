@@ -218,3 +218,42 @@ module.exports.differenceArray = (G, solution) => {
     }
     return D;
 }
+
+module.exports.connectedComponents = (G) => {
+    const visited = [];
+    for (let i = 0; i < G.size; i += 1) {
+        visited.push(false)
+    }
+    const components = [];
+    const currentNode = 0;
+    // While we haven't visited all nodes
+    while (!visited.reduce((a, val) => a && val, true)) {
+        // Pick a node to visit from G that we haven't already visited
+        const toVisit = [];
+        for (let i = 0; i < G.size; i += 1) {
+            if (!visited[i]) {
+                toVisit.push(i)
+                break;
+            }
+        }
+        // Build the component around that node
+        const currentComponent = [];
+        while (toVisit.length !== 0) {
+            const from = toVisit.pop();
+            currentComponent.push(from)
+            visited[from] = true
+            // Add neighbours of the node to toVisit (unless we've been there already)
+            for (let to = 0; to < G.size; to += 1) {
+                if (
+                    (!visited[to]) &&
+                    (G.weight(from, to) > 0) 
+                ) {
+                    visited[to] = true
+                    toVisit.push(to)
+                }
+            }
+        }
+        components.push(currentComponent);
+    }
+    return components;
+} 
