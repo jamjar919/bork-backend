@@ -335,7 +335,7 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     // Setup the matrix
     for (let i = 0; i < G.size; i += 1) {
         for (let j = 0; j < G.size; j += 1) {
-            adjacency._data[i][j] = G.weight(i, j) >= 0 ? Math.sqrt(G.weight(i, j)) : -(Math.sqrt(Math.abs(G.weight(i, j))))
+            adjacency._data[i][j] = G.weight(i, j)// >= 0 ? Math.sqrt(G.weight(i, j)) : -(Math.sqrt(Math.abs(G.weight(i, j))))
         }
     }
     const degree = mathjs.matrix(mathjs.zeros([G.size, G.size]));
@@ -354,10 +354,17 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     const eigenvectors = e.E.x
 
     // Extract fieldler vector (second smallest eigenvector)
-    const eigenvaluesCopy = Object.assign([], eigenvalues)
-    eigenvalues.sort()
-    const fieldler = eigenvalues[1]
-    const fieldlerVector = eigenvectors[eigenvaluesCopy.indexOf(fieldler)]
+    const sortedEigen = Object.assign([], eigenvalues)
+    sortedEigen.sort((a,b)=>a-b)
+    let fieldler = undefined
+    let vector = 0;
+    while (typeof fieldler === 'undefined') {
+        if (sortedEigen[vector] > 0) {
+            fieldler = sortedEigen[vector+1]
+        }
+        vector += 1
+    }
+    const fieldlerVector = eigenvectors[eigenvalues.indexOf(fieldler)]
 
     // Partition by sign initially
     const median = mathjs.median(fieldlerVector);
@@ -461,7 +468,7 @@ function KernighanLin(G, solution) {
     const av = [];
     const bv = [];
     // Calculate D array
-    const minPartitionSize = Math.min(solution.map(val => val.length))
+    const minPartitionSize = Math.min(A.length, B.length)
     for (let n = 0; n < Math.floor(minPartitionSize); n += 1) {
         let D = Tools.differenceArray(G, [A, B])
         // Find a from A and b from B such that g = Da + Db - 2*c(a,b) is maximised
