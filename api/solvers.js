@@ -354,9 +354,10 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
     const eigenvectors = e.E.x
 
     // Extract fieldler vector (second smallest eigenvector)
+    const eigenvaluesCopy = Object.assign([], eigenvalues)
     eigenvalues.sort()
     const fieldler = eigenvalues[1]
-    const fieldlerVector = eigenvectors[eigenvalues.indexOf(fieldler)]
+    const fieldlerVector = eigenvectors[eigenvaluesCopy.indexOf(fieldler)]
 
     // Partition by sign initially
     const median = mathjs.median(fieldlerVector);
@@ -427,6 +428,7 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
         // recurse into next sol
         // Remove nodes in smallest partition
         const removedNodes = solution[0]
+        console.log(`removed partition is of size ${solution[0].length}`)
         removedNodes.sort((a, b) => b-a)
         const remainingNodes = Tools.intArray(0, G.size)
         const G_dash = G.copy();

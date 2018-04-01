@@ -10,7 +10,8 @@ module.exports = function(app) {
   app.route('/api/graphs/:graphId')
     .get(graphs.get)
     .post(graphs.updateEdge)
-    .delete(graphs.delete);
+    .delete(graphs.delete)
+    .options((req, res) => { res.send("200 OK\nAllow: GET,POST,DELETE,OPTIONS") });
 
   app.route('/api/graphs/:graphId/names')
     .get(graphs.getNames)

@@ -185,6 +185,7 @@ exports.updateEdge = function(req, res) {
 }
 
 exports.delete = function(req, res) {
+    console.log("deleting",req.params.graphId)
     GraphModel.remove({
         _id: req.params.graphId
     }, function(err, graph) {

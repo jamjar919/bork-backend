@@ -4,9 +4,9 @@ from random import random, randint
 for i in range(0, 100):
     print("Node", i)
     for j in range(0, 100):
-        if random() < 0.01:
-            requests.post('http://localhost:3000/api/graphs/5ab95ca93a7ff821f4e064da', data = {
+        if random() < 0.1:
+            requests.post('http://localhost:3000/api/graphs/5ac1171819ebb61d4c98714c', data = {
                 'from': i, 
                 'to': j,
-                'value': randint(0, 10)
+                'value': randint(-10, 10)
             })
