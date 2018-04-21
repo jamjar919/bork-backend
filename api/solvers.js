@@ -9,6 +9,9 @@ intArray = Tools.intArray,
 getRandomInt = Tools.getRandomInt,
 addArray = Tools.addArray;
 
+
+const fs = require('fs');
+
 const MIN_COARSEGROW_PARTITION_SIZE = 20;
 
 // Import numeric.js into math.js
@@ -122,7 +125,6 @@ module.exports.partitionResizer = function(G, solution, goalSizes, debug = false
 }
 
 module.exports.simplify = function (G, n, sizes, solver, solverArguments = []) {
-    console.log("Simplifying input graph...")
     // Simplify a graph by removing all nodes with no connections
     let removedNodes = [];
     const remainingNodes = [];
@@ -163,16 +165,16 @@ module.exports.simplify = function (G, n, sizes, solver, solverArguments = []) {
     }
     n_dash = sizes_dash.length; 
 
-    console.log(`Simplified original graph of size ${G.size} to ${G_dash.size}`)
+    //console.log(`Simplified original graph of size ${G.size} to ${G_dash.size}`)
 
     // Identify connected components of the graph
     const components = Tools.connectedComponents(G_dash);
-    console.log(`${components.length} connected components of sizes ${components.map(val => val.length)}`)
+    //console.log(`${components.length} connected components of sizes ${components.map(val => val.length)}`)
 
     // Get the solution for the smaller graph
     let solution = solver(G_dash, n_dash, sizes_dash, ...solverArguments)
 
-    console.log(`Solved`);
+    //console.log(`Solved`);
 
     // Map solution back onto original nodes
     solution = solution.map(
@@ -317,17 +319,14 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
         return solution;
     }
 
-    console.log(sizes)
     let sizesNext = []
     if (sizes.length > 2) {
         sizesNext = Object.assign([], sizes)
         // Make the smallest partitions first
-        console.log("sizesnext",sizesNext)
         sizesNext.splice(0, 1)
         const goalSizes = [sizes[0], 0]
         goalSizes[1] = sizes.reduce((a, v) => a + v, 0) - sizes[0];
         sizes = goalSizes
-        console.log(sizes)
     }
     
     let adjacency = mathjs.matrix(mathjs.zeros([G.size, G.size]));
@@ -395,6 +394,18 @@ module.exports.spectral = function(G, n, sizes, debug = false) {
         takeFrom = 1;
     }
 
+    // Avoid errors when median doesn't split equally
+    if (solution[takeFrom].length < Math.min(sizes[0], sizes[1])) {
+        console.log("errorrr")
+        if (solution[0].length < solution[1].length) {
+            takeFrom = 0;
+        }
+        takeFrom = 1;
+    }
+
+    console.log(takeFrom)
+    console.log(solution)
+    
     // We have always that every node in solution[0] has higher val than every node in solution[1]
     while (!(
         (

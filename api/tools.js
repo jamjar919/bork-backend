@@ -77,6 +77,63 @@ module.exports.isValidPartition = (G, partition) => {
     return true;
 }
 
+module.exports.placedGraph = (size, pcross = undefined, ptween = undefined) => {
+    if (typeof pcross === 'undefined') {
+        pcross = 1/size;
+        console.log("inferred pcross as"+pcross)
+    }
+    if (typeof ptween === 'undefined') {
+        ptween = 1/Math.sqrt(size);
+        console.log("inferred ptween as"+ptween)
+    }
+    const G = new Graph(size);
+    const partitions = [
+        [0, Math.floor(size/2)],
+        [Math.floor(size/2), size],
+    ];
+    // between
+    let internalw = 0;
+    for (let p = 0; p < partitions.length; p += 1) {
+        const partition = partitions[p];
+        for (let i = partition[0]; i < partition[1]; i += 1) {
+            for (let j = partition[0]; j < partition[1]; j += 1) {
+                if (Math.random() < ptween) {
+                    const w = module.exports.getRandomInt(-1, 10)
+                    G.weight(
+                        i, j,
+                        w
+                    )
+                    internalw += w
+                }
+            }
+        }
+    }
+    // across
+    let partitionSize = 0;
+    for (let p1 = 0; p1 < partitions.length; p1 += 1) {
+        const partition1 = partitions[p1];
+        for (let p2 = 0; p2 < partitions.length; p2 += 1) {
+            if (p1 !== p2) {
+                const partition2 = partitions[p2];
+                for (let i = partition1[0]; i < partition1[1]; i += 1) {
+                    for (let j = partition2[0]; j < partition2[1]; j += 1) {
+                        if (Math.random() < pcross) {
+                            const w = module.exports.getRandomInt(-1, 10);
+                            G.weight(
+                                i, j,
+                                w
+                            )
+                            partitionSize += w;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    console.log("wratio",internalw/partitionSize)
+    return [G, partitionSize];
+}
+
 module.exports.randomGraph = (size, min = 0, max = 5) => {
     const G = new Graph(size);
     for (let i = 0; i < size; i += 1) {

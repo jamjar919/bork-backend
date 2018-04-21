@@ -39,9 +39,12 @@ exports.create = function(req, res) {
         });
         console.log(new_graph);
         new_graph.save(function(err, graph) {
-        if (err)
+        if (err) {
+            console.log(err)
             res.send(err);
-        res.json(graph);
+        } else {
+            res.json(graph);
+        }
     });
     } else {
         res.send("Specify a size");
@@ -53,7 +56,8 @@ exports.get = function(req, res) {
     GraphModel.findById(req.params.graphId, function(err, graph) {
         if (err)
             res.send(err);
-        res.json(graph);
+        else
+            res.json(graph);
     });
 };
 
@@ -88,41 +92,47 @@ exports.solve = function(req, res) {
                 sizes = Tools.getSizes(G.size, n)
             }
             if (!error) {
-                switch(req.query.method){
-                    case "rand":
-                        solution = Solver.random(G, n, sizes);
-                        break;
-                    case "fill":
-                        console.log("Using Fill")
-                        let best = undefined;
-                        let bestSol = [];
-                        let worst = 0;
-                        let worstSol = [];
-                        for (let i = 0; i < 100; i += 1) {
-                            const sol = Solver.simplify(G, n, sizes, Solver.fillGraph);
-                            const cut = Tools.calculatePartition(G, sol);
-                            if (cut > worst) {
-                                worst = cut;
-                                worstSol = sol;
+                try {
+                    switch(req.query.method){
+                        case "rand":
+                            solution = Solver.random(G, n, sizes);
+                            break;
+                        case "fill":
+                            console.log("Using Fill")
+                            let best = undefined;
+                            let bestSol = [];
+                            let worst = 0;
+                            let worstSol = [];
+                            for (let i = 0; i < 100; i += 1) {
+                                const sol = Solver.simplify(G, n, sizes, Solver.fillGraph);
+                                const cut = Tools.calculatePartition(G, sol);
+                                if (cut > worst) {
+                                    worst = cut;
+                                    worstSol = sol;
+                                }
+                                if ((cut < best) || !best) {
+                                    best = cut;
+                                    bestSol = sol;
+                                }
                             }
-                            if ((cut < best) || !best) {
-                                best = cut;
-                                bestSol = sol;
-                            }
-                        }
-                        solution = bestSol;
-                        solution = Solver.partitionResizer(G, solution, sizes);
-                        break;
-                    case "coarsegrow":
-                        console.log("Using CoarseGrow")
-                        solution = Solver.simplify(G, n, sizes, Solver.coarseGrow);
-                        break;
-                    case "spectral":
-                        solution = Solver.simplify(G, n, sizes, Solver.spectral, [true]);
-                        break;
-                    default:
-                        error = true;
-                        res.json({"error": 'Solve method not found'});
+                            solution = bestSol;
+                            solution = Solver.partitionResizer(G, solution, sizes);
+                            break;
+                        case "coarsegrow":
+                            console.log("Using CoarseGrow")
+                            solution = Solver.simplify(G, n, sizes, Solver.coarseGrow);
+                            break;
+                        case "spectral":
+                            solution = Solver.simplify(G, n, sizes, Solver.spectral);
+                            break;
+                        default:
+                            error = true;
+                            res.json({"error": 'Solve method not found'});
+                    }
+                } catch(err) {
+                    console.log(err)
+                    res.json({"error": err.message})
+                    return;
                 }
                 if (!error) {
                     // Rate how good the solution is 

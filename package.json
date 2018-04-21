@@ -19,11 +19,13 @@
   "homepage": "https://github.com/jamjar919/bork-backend#readme",
   "dependencies": {
     "body-parser": "^1.18.2",
+    "csv-stringify": "^3.0.0",
     "express": "^4.16.2",
     "mathjs": "^4.0.1",
     "mongoose": "^4.13.0",
     "node-fetch": "^2.1.2",
-    "numericjs": "^1.2.6"
+    "numericjs": "^1.2.6",
+    "perfy": "^1.1.2"
   },
   "devDependencies": {
     "nodemon": "^1.12.1"
